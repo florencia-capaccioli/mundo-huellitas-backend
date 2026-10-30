@@ -1,16 +1,14 @@
 import express from "express";
 import morgan from "morgan";
 import cors from "cors";
-import adoptantesRoutes from "./routes/adoptantesRoutes.js";
-import refugiosRoutes from "./routes/refugiosRoutes.js";
+import usersRoutes from "./routes/usersRoutes.js";
 
 const app = express();
 
 app.use(morgan("dev"));
 app.use(cors());
 app.use(express.json());
-app.use("/api/adoptantes", adoptantesRoutes);
-app.use("/api/refugios", refugiosRoutes);
+app.use("/api/users", usersRoutes);
 
 app.get("/", (req, res) => {
     res.send("API funcionando 🚀");
