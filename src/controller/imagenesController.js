@@ -1,4 +1,71 @@
+import path from "path";
+import fs from "fs";
+import crypto from "crypto";
+import multer from "multer";
 import { subirImagen, listarImagenes, existeImagen, urlPublica, TIPOS_PERMITIDOS } from "../service/imagenesService.js";
+
+const uploadsDir = path.join(process.cwd(), "uploads");
+fs.mkdirSync(uploadsDir, { recursive: true });
+
+const storage = multer.diskStorage({
+    destination: uploadsDir,
+    filename: (req, file, callback) => {
+        const extension = path.extname(file.originalname || "").toLowerCase() || ".jpg";
+        callback(null, `${crypto.randomUUID()}${extension}`);
+    }
+});
+
+export const subirLocalMiddleware = multer({
+    storage,
+    limits: { fileSize: 8 * 1024 * 1024 },
+    fileFilter: (req, file, callback) => {
+        if (file.mimetype && file.mimetype.startsWith("image/")) {
+            callback(null, true);
+            return;
+        }
+        callback(new Error("El archivo tiene que ser una imagen"));
+    }
+}).single("foto");
+
+export function subirLocal(req, res) {
+    if (!req.file) {
+        return res.status(400).json({ message: "Falta la foto" });
+    }
+
+    const url = `${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
+    res.status(201).json({ url });
+}
+
+const EXTENSIONES_LOCALES = {
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif"
+};
+
+export function subirDesdeBase64(req, res) {
+    const { base64, mime } = req.body || {};
+
+    if (!base64 || typeof base64 !== "string") {
+        return res.status(400).json({ message: "Falta la foto" });
+    }
+
+    const limpio = base64.replace(/^data:image\/\w+;base64,/, "");
+    const buffer = Buffer.from(limpio, "base64");
+
+    if (!buffer.length || buffer.length > 8 * 1024 * 1024) {
+        return res.status(400).json({ message: "La foto es demasiado grande" });
+    }
+
+    const extension = EXTENSIONES_LOCALES[mime] || "jpg";
+    const nombre = `${crypto.randomUUID()}.${extension}`;
+
+    fs.writeFileSync(path.join(uploadsDir, nombre), buffer);
+
+    const url = `${req.protocol}://${req.get("host")}/uploads/${nombre}`;
+    res.status(201).json({ url });
+}
 
 export async function subir(req, res) {
     const contentType = req.headers["content-type"];

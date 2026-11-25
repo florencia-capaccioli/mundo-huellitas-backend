@@ -175,6 +175,10 @@ export async function updateAnimalController(req, res) {
             }
         }
 
+        if (typeof req.body.adoptado === "boolean") {
+            animalData.adoptado = req.body.adoptado;
+        }
+
         if (Object.keys(animalData).length === 0) {
             return res.status(400).json({
                 message: "No se enviaron campos para actualizar"
